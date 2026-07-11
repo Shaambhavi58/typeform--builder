@@ -14,11 +14,14 @@ app = FastAPI(
     description="Backend API for the Typeform Builder assignment.",
 )
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
         "http://127.0.0.1:3000",
+        "https://typeform-builder-one.vercel.app",
     ],
     allow_credentials=True,
     allow_methods=["*"],
