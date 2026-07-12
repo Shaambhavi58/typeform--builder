@@ -148,9 +148,18 @@ def _replace_question_options(
     db.flush()
 
     for index, option_data in enumerate(options):
+        # Defensive: works whether option_data is a Pydantic model
+        # or a plain dict (e.g. if it ever arrives pre-dumped).
+        label = (
+            option_data.get("label", "")
+            if isinstance(option_data, dict)
+            else option_data.label
+        )
+        label = label.strip()
+
         option = QuestionOption(
             question_id=question.id,
-            label=option_data.label.strip(),
+            label=label,
             position=index,
         )
 
@@ -327,10 +336,18 @@ def update_question(
         question.type,
     )
 
-    supplied_options = update_data.pop(
-        "options",
-        None,
-    )
+    # IMPORTANT: pull options from the original Pydantic model
+    # (question_data.options), NOT from the dumped dict.
+    # model_dump() converts nested option objects into plain
+    # dicts, which don't have a `.label` attribute and would
+    # break _replace_question_options.
+    supplied_options = None
+    if "options" in question_data.model_fields_set:
+        supplied_options = question_data.options
+
+    # Still remove "options" from update_data so it isn't
+    # accidentally set via setattr() below.
+    update_data.pop("options", None)
 
     if "title" in update_data:
         clean_title = update_data["title"].strip()
