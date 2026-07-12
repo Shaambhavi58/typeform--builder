@@ -639,4 +639,4 @@ def duplicate_question(
     return get_question_or_404(
         db=db,
         question_id=copied_question.id,
-    )
+    )gu
