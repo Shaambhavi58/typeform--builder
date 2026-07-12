@@ -27,10 +27,14 @@ app.add_middleware(
 )
 
 
-@app.get("/", tags=["Health"])
-def health_check() -> dict[str, str]:
+@app.get("/debug/source", tags=["Debug"])
+def debug_source() -> dict[str, str]:
+    import pathlib
+    path = pathlib.Path(__file__).parent / "services" / "question_service.py"
+    content = path.read_text()
     return {
-        "status": "ok",
-        "message": "Typeform Clone API is running",
-        "debug_version": "v3-canary-test",
+        "path": str(path),
+        "has_isinstance_fix": "isinstance(option_data, dict)" in content,
+        "has_canary": "CANARY" in content,
+        "line_153_area": "\n".join(content.splitlines()[145:160]),
     }
