@@ -32,4 +32,5 @@ def health_check() -> dict[str, str]:
     return {
         "status": "ok",
         "message": "Typeform Clone API is running",
+        "debug_version": "v3-canary-test",
     }
