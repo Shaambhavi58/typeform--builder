@@ -4,6 +4,7 @@ import { Plus, Trash2 } from "lucide-react";
 
 import type {
   Question,
+  QuestionOption,
   QuestionType,
 } from "@/types/form";
 
@@ -21,17 +22,25 @@ const questionTypes: Array<{
   { value: "rating", label: "Rating" },
 ];
 
-const CHOICE_TYPES: QuestionType[] = [
-  "multiple_choice",
-  "dropdown",
-];
-
 interface QuestionEditorProps {
   question: Question | null;
   onChange: (
     questionId: number,
     updates: Partial<Question>,
   ) => void;
+}
+
+function isChoiceQuestion(type: QuestionType) {
+  return type === "multiple_choice" || type === "dropdown";
+}
+
+function normalizeOptions(
+  options: QuestionOption[],
+): QuestionOption[] {
+  return options.map((option, index) => ({
+    ...option,
+    position: index,
+  }));
 }
 
 export function QuestionEditor({
@@ -55,94 +64,105 @@ export function QuestionEditor({
     );
   }
 
-  const currentQuestion = question;
-  const isChoiceType = CHOICE_TYPES.includes(
-    currentQuestion.type,
-  );
-
   function handleTypeChange(nextType: QuestionType) {
-    const wasChoiceType = CHOICE_TYPES.includes(
-      currentQuestion.type,
+    const nextIsChoiceQuestion =
+      isChoiceQuestion(nextType);
+
+    let nextOptions: QuestionOption[] = [];
+
+    if (nextIsChoiceQuestion) {
+      nextOptions =
+        question.options.length >= 2
+          ? normalizeOptions(question.options)
+          : [
+              {
+                label: "Option 1",
+                position: 0,
+              },
+              {
+                label: "Option 2",
+                position: 1,
+              },
+            ];
+    }
+
+    onChange(question.id, {
+      type: nextType,
+      options: nextOptions,
+    });
+  }
+
+  function handleOptionChange(
+    optionIndex: number,
+    label: string,
+  ) {
+    const updatedOptions = question.options.map(
+      (option, index) => ({
+        ...option,
+        label:
+          index === optionIndex
+            ? label
+            : option.label,
+        position: index,
+      }),
     );
-    const willBeChoiceType = CHOICE_TYPES.includes(nextType);
 
-    if (willBeChoiceType && !wasChoiceType) {
-      // Backend requires at least two options for choice types,
-      // so seed sensible defaults when switching into one.
-      onChange(currentQuestion.id, {
-        type: nextType,
-        options: [
-          { label: "Option 1", position: 0 },
-          { label: "Option 2", position: 1 },
-        ],
-      });
-
-      return;
-    }
-
-    if (!willBeChoiceType && wasChoiceType) {
-      onChange(currentQuestion.id, {
-        type: nextType,
-        options: [],
-      });
-
-      return;
-    }
-
-    onChange(currentQuestion.id, { type: nextType });
+    onChange(question.id, {
+      options: updatedOptions,
+    });
   }
 
   function handleAddOption() {
-    const nextOptions = [
-      ...currentQuestion.options,
-      {
-        label: `Option ${currentQuestion.options.length + 1}`,
-        position: currentQuestion.options.length,
-      },
-    ];
+    const nextPosition = question.options.length;
 
-    onChange(currentQuestion.id, { options: nextOptions });
+    onChange(question.id, {
+      options: [
+        ...normalizeOptions(question.options),
+        {
+          label: `Option ${nextPosition + 1}`,
+          position: nextPosition,
+        },
+      ],
+    });
   }
 
-  function handleOptionLabelChange(
-    index: number,
-    label: string,
+  function handleDeleteOption(
+    optionIndex: number,
   ) {
-    const nextOptions = currentQuestion.options.map(
-      (option, optionIndex) =>
-        optionIndex === index
-          ? { ...option, label }
-          : option,
-    );
-
-    onChange(currentQuestion.id, { options: nextOptions });
-  }
-
-  function handleDeleteOption(index: number) {
-    if (currentQuestion.options.length <= 2) {
+    if (question.options.length <= 2) {
       return;
     }
 
-    const nextOptions = currentQuestion.options
-      .filter((_, optionIndex) => optionIndex !== index)
-      .map((option, optionIndex) => ({
+    const updatedOptions = question.options
+      .filter((_, index) => index !== optionIndex)
+      .map((option, index) => ({
         ...option,
-        position: optionIndex,
+        position: index,
       }));
 
-    onChange(currentQuestion.id, { options: nextOptions });
+    onChange(question.id, {
+      options: updatedOptions,
+    });
   }
+
+  const choiceQuestion = isChoiceQuestion(
+    question.type,
+  );
 
   return (
     <section className="min-w-0 flex-1 overflow-y-auto bg-[#f7f7f5] p-8">
       <div className="mx-auto max-w-2xl">
         <div className="rounded-3xl border border-zinc-200 bg-white p-7 shadow-sm">
           <div className="space-y-2">
-            <label className="text-sm font-medium text-zinc-900">
+            <label
+              htmlFor="question-type"
+              className="text-sm font-medium text-zinc-900"
+            >
               Question type
             </label>
 
             <select
+              id="question-type"
               value={question.type}
               onChange={(event) =>
                 handleTypeChange(
@@ -152,7 +172,10 @@ export function QuestionEditor({
               className="h-11 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm outline-none transition focus:border-zinc-400"
             >
               {questionTypes.map((type) => (
-                <option key={type.value} value={type.value}>
+                <option
+                  key={type.value}
+                  value={type.value}
+                >
                   {type.label}
                 </option>
               ))}
@@ -160,11 +183,15 @@ export function QuestionEditor({
           </div>
 
           <div className="mt-6 space-y-2">
-            <label className="text-sm font-medium text-zinc-900">
+            <label
+              htmlFor="question-title"
+              className="text-sm font-medium text-zinc-900"
+            >
               Question
             </label>
 
             <textarea
+              id="question-title"
               value={question.title}
               onChange={(event) =>
                 onChange(question.id, {
@@ -177,15 +204,20 @@ export function QuestionEditor({
           </div>
 
           <div className="mt-6 space-y-2">
-            <label className="text-sm font-medium text-zinc-900">
+            <label
+              htmlFor="question-description"
+              className="text-sm font-medium text-zinc-900"
+            >
               Description
             </label>
 
             <textarea
+              id="question-description"
               value={question.description ?? ""}
               onChange={(event) =>
                 onChange(question.id, {
-                  description: event.target.value || null,
+                  description:
+                    event.target.value || null,
                 })
               }
               className="min-h-24 w-full resize-none rounded-2xl border border-zinc-200 px-4 py-3 text-sm outline-none transition focus:border-zinc-400"
@@ -193,59 +225,69 @@ export function QuestionEditor({
             />
           </div>
 
-          {isChoiceType && (
-            <div className="mt-6 space-y-2">
-              <label className="text-sm font-medium text-zinc-900">
-                Options
-              </label>
+          {choiceQuestion && (
+            <div className="mt-6 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-zinc-900">
+                    Options
+                  </p>
 
-              <div className="space-y-2">
-                {question.options.map((option, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center gap-2"
-                  >
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-zinc-200 text-xs font-medium text-zinc-500">
-                      {String.fromCharCode(65 + index)}
-                    </span>
+                  <p className="mt-1 text-xs text-zinc-500">
+                    At least two options are required.
+                  </p>
+                </div>
 
-                    <input
-                      value={option.label}
-                      onChange={(event) =>
-                        handleOptionLabelChange(
-                          index,
-                          event.target.value,
-                        )
-                      }
-                      placeholder={`Option ${index + 1}`}
-                      className="h-9 w-full rounded-xl border border-zinc-200 px-3 text-sm outline-none transition focus:border-zinc-400"
-                    />
-
-                    <button
-                      type="button"
-                      aria-label={`Delete option ${index + 1}`}
-                      onClick={() => handleDeleteOption(index)}
-                      disabled={question.options.length <= 2}
-                      className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-zinc-400"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                ))}
+                <button
+                  type="button"
+                  onClick={handleAddOption}
+                  className="inline-flex h-9 items-center gap-2 rounded-xl border border-zinc-200 px-3 text-sm font-medium text-zinc-700 transition hover:bg-zinc-100"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add option
+                </button>
               </div>
 
-              <button
-                type="button"
-                onClick={handleAddOption}
-                className="mt-1 inline-flex items-center gap-2 rounded-xl border border-dashed border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-600 transition hover:border-zinc-400 hover:bg-zinc-50"
-              >
-                <Plus className="h-4 w-4" />
-                Add option
-              </button>
+              <div className="space-y-3">
+                {question.options.map(
+                  (option, index) => (
+                    <div
+                      key={option.id ?? index}
+                      className="flex items-center gap-3"
+                    >
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-zinc-50 text-sm font-medium text-zinc-500">
+                        {String.fromCharCode(65 + index)}
+                      </div>
 
-              <p className="text-xs text-zinc-400">
-                At least two options are required.
-              </p>
+                      <input
+                        value={option.label}
+                        onChange={(event) =>
+                          handleOptionChange(
+                            index,
+                            event.target.value,
+                          )
+                        }
+                        placeholder={`Option ${index + 1}`}
+                        className="h-10 min-w-0 flex-1 rounded-xl border border-zinc-200 px-3 text-sm outline-none transition focus:border-zinc-400"
+                      />
+
+                      <button
+                        type="button"
+                        disabled={
+                          question.options.length <= 2
+                        }
+                        onClick={() =>
+                          handleDeleteOption(index)
+                        }
+                        aria-label={`Delete option ${index + 1}`}
+                        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-zinc-400 transition hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-30"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ),
+                )}
+              </div>
             </div>
           )}
 
