@@ -1,9 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-import app.models  # noqa: F401
 from app.database import Base, engine
-from app.routers import forms, public, questions, responses
+import app.models  # noqa: F401
 
 
 Base.metadata.create_all(bind=engine)
@@ -14,8 +13,6 @@ app = FastAPI(
     description="Backend API for the Typeform Builder assignment.",
 )
 
-from fastapi.middleware.cors import CORSMiddleware
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -23,15 +20,11 @@ app.add_middleware(
         "http://127.0.0.1:3000",
         "https://typeform-builder-one.vercel.app",
     ],
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-app.include_router(forms.router)
-app.include_router(questions.router)
-app.include_router(responses.router)
-app.include_router(public.router)
 
 
 @app.get("/", tags=["Health"])
