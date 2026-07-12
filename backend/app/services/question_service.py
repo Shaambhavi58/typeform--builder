@@ -137,6 +137,9 @@ def _replace_question_options(
     Delete existing options and replace them with a new ordered list.
     """
 
+    print("CANARY: running FIXED version of _replace_question_options", flush=True)
+    print(f"CANARY: options={options!r}", flush=True)
+
     _validate_question_options(
         question_type=question.type,
         options_count=len(options),
