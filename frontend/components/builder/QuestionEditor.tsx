@@ -64,6 +64,11 @@ export function QuestionEditor({
     );
   }
 
+  // Bind to a stable const so nested function declarations below
+  // aren't flagged as "question is possibly null" by TypeScript
+  // (it can't narrow a prop across closures otherwise).
+  const currentQuestion = question;
+
   function handleTypeChange(nextType: QuestionType) {
     const nextIsChoiceQuestion =
       isChoiceQuestion(nextType);
@@ -72,8 +77,8 @@ export function QuestionEditor({
 
     if (nextIsChoiceQuestion) {
       nextOptions =
-        question.options.length >= 2
-          ? normalizeOptions(question.options)
+        currentQuestion.options.length >= 2
+          ? normalizeOptions(currentQuestion.options)
           : [
               {
                 label: "Option 1",
@@ -86,7 +91,7 @@ export function QuestionEditor({
             ];
     }
 
-    onChange(question.id, {
+    onChange(currentQuestion.id, {
       type: nextType,
       options: nextOptions,
     });
@@ -96,7 +101,7 @@ export function QuestionEditor({
     optionIndex: number,
     label: string,
   ) {
-    const updatedOptions = question.options.map(
+    const updatedOptions = currentQuestion.options.map(
       (option, index) => ({
         ...option,
         label:
@@ -107,17 +112,17 @@ export function QuestionEditor({
       }),
     );
 
-    onChange(question.id, {
+    onChange(currentQuestion.id, {
       options: updatedOptions,
     });
   }
 
   function handleAddOption() {
-    const nextPosition = question.options.length;
+    const nextPosition = currentQuestion.options.length;
 
-    onChange(question.id, {
+    onChange(currentQuestion.id, {
       options: [
-        ...normalizeOptions(question.options),
+        ...normalizeOptions(currentQuestion.options),
         {
           label: `Option ${nextPosition + 1}`,
           position: nextPosition,
@@ -129,18 +134,18 @@ export function QuestionEditor({
   function handleDeleteOption(
     optionIndex: number,
   ) {
-    if (question.options.length <= 2) {
+    if (currentQuestion.options.length <= 2) {
       return;
     }
 
-    const updatedOptions = question.options
+    const updatedOptions = currentQuestion.options
       .filter((_, index) => index !== optionIndex)
       .map((option, index) => ({
         ...option,
         position: index,
       }));
 
-    onChange(question.id, {
+    onChange(currentQuestion.id, {
       options: updatedOptions,
     });
   }
