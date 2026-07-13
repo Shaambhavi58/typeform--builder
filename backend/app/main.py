@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import Base, engine
 import app.models  # noqa: F401
+from app.routers import forms, public, questions, responses
 
 
 Base.metadata.create_all(bind=engine)
@@ -26,15 +27,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(forms.router)
+app.include_router(questions.router)
+app.include_router(responses.router)
+app.include_router(public.router)
 
-@app.get("/debug/source", tags=["Debug"])
-def debug_source() -> dict[str, str]:
-    import pathlib
-    path = pathlib.Path(__file__).parent / "services" / "question_service.py"
-    content = path.read_text()
+
+@app.get("/", tags=["Health"])
+def health_check() -> dict[str, str]:
     return {
-        "path": str(path),
-        "has_isinstance_fix": "isinstance(option_data, dict)" in content,
-        "has_canary": "CANARY" in content,
-        "line_153_area": "\n".join(content.splitlines()[145:160]),
+        "status": "ok",
+        "message": "Typeform Clone API is running",
     }

@@ -26,8 +26,10 @@ CHOICE_QUESTION_TYPES = {
 def _question_query_with_options():
     """Base query that loads a question together with its options."""
 
-    return select(Question).options(
-        selectinload(Question.options)
+    return (
+        select(Question)
+        .options(selectinload(Question.options))
+        .execution_options(populate_existing=True)
     )
 
 
@@ -136,9 +138,6 @@ def _replace_question_options(
     """
     Delete existing options and replace them with a new ordered list.
     """
-
-    print("CANARY: running FIXED version of _replace_question_options", flush=True)
-    print(f"CANARY: options={options!r}", flush=True)
 
     _validate_question_options(
         question_type=question.type,
